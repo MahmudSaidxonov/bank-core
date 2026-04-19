@@ -10,6 +10,7 @@ import uz.banking.bank_core.dto.DepositRequestDto;
 import uz.banking.bank_core.entity.Account;
 import uz.banking.bank_core.exception.AccountNotFoundException;
 import uz.banking.bank_core.exception.UserNotFoundException;
+import uz.banking.bank_core.mapper.AccountMapper;
 import uz.banking.bank_core.repository.AccountRepository;
 import uz.banking.bank_core.repository.UserRepository;
 
@@ -20,8 +21,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AccountService {
 
-    private final AccountRepository accountRepository;
+    private final AccountMapper accountMapper;
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
 
     public List<AccountResponseDto> getUserAccounts(Long userId) {
 
@@ -32,14 +34,7 @@ public class AccountService {
         List<Account> accounts = accountRepository.findAllByUserId(userId);
 
         return accounts.stream()
-                .map(account -> {
-                    AccountResponseDto accountResponseDto = new AccountResponseDto();
-                    accountResponseDto.setId(account.getId());
-                    accountResponseDto.setAccountNumber(account.getAccountNumber());
-                    accountResponseDto.setBalance(account.getBalance());
-                    accountResponseDto.setCurrency(account.getCurrency());
-                    return accountResponseDto;
-                })
+                .map(accountMapper::toDto)
                 .toList();
     }
 
@@ -50,15 +45,9 @@ public class AccountService {
                 .orElseThrow(() -> new AccountNotFoundException("Account with ID " + requestDto.getAccountId() + " not found"));
 
         account.setBalance(account.getBalance().add(requestDto.getAmount()));
-//        Account savedAccount = accountRepository.save(account);
+        Account savedAccount = accountRepository.save(account);
 
-        AccountResponseDto accountResponseDto = new AccountResponseDto();
-        accountResponseDto.setId(account.getId());
-        accountResponseDto.setAccountNumber(account.getAccountNumber());
-        accountResponseDto.setBalance(account.getBalance());
-        accountResponseDto.setCurrency(account.getCurrency());
-
-        return accountResponseDto;
+        return accountMapper.toDto(savedAccount);
     }
 
 }

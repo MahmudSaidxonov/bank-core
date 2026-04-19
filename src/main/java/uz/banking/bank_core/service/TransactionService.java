@@ -12,6 +12,7 @@ import uz.banking.bank_core.exception.AccountNotFoundException;
 import uz.banking.bank_core.exception.InsufficientFundsException;
 import uz.banking.bank_core.exception.SelfTransferException;
 import uz.banking.bank_core.exception.UserNotFoundException;
+import uz.banking.bank_core.mapper.TransactionMapper;
 import uz.banking.bank_core.repository.AccountRepository;
 import uz.banking.bank_core.repository.TransactionRepository;
 
@@ -19,6 +20,7 @@ import uz.banking.bank_core.repository.TransactionRepository;
 @AllArgsConstructor
 public class TransactionService {
 
+    private final TransactionMapper transactionMapper;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
 
@@ -50,14 +52,6 @@ public class TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        TransactionResponseDto responseDto = new TransactionResponseDto();
-        responseDto.setId(savedTransaction.getId());
-        responseDto.setFromAccountId(savedTransaction.getFromAccount().getId());
-        responseDto.setToAccountId(savedTransaction.getToAccount().getId());
-        responseDto.setAmount(savedTransaction.getAmount());
-        responseDto.setStatus(savedTransaction.getStatus());
-        responseDto.setCreatedAt(savedTransaction.getCreatedAt());
-
-        return responseDto;
+        return transactionMapper.toDto(savedTransaction);
     }
 }

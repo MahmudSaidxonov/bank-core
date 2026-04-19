@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import uz.banking.bank_core.exception.UserAlreadyExistsException;
+import uz.banking.bank_core.mapper.UserMapper;
 import uz.banking.bank_core.repository.AccountRepository;
 import uz.banking.bank_core.repository.UserRepository;
 
@@ -18,6 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
+    private final UserMapper userMapper;
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
 
@@ -28,9 +30,7 @@ public class UserService {
             throw new UserAlreadyExistsException("A user with this name or email already exists!");
         }
 
-        User user = new User();
-        user.setUsername(userDto.getUsername());
-        user.setEmail(userDto.getEmail());
+        User user = userMapper.toEntity(userDto);
         user.setPasswordHash(userDto.getPassword() + "_hashed");
 
         User savedUser = userRepository.save(user);
@@ -43,11 +43,6 @@ public class UserService {
 
         accountRepository.save(defaultAccount);
 
-        UserResponseDto userResponseDto = new UserResponseDto();
-        userResponseDto.setId(savedUser.getId());
-        userResponseDto.setUsername(savedUser.getUsername());
-        userResponseDto.setEmail(savedUser.getEmail());
-
-        return userResponseDto;
+        return userMapper.toDto(savedUser);
     }
 }
