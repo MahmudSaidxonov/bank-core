@@ -78,4 +78,15 @@ public class GlobalExceptionHandler {
                 .data(null)
                 .build();
     }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiResponseDto<Void> handleIncorrectPasswordException(BadCredentialsException e) {
+        return ApiResponseDto.<Void>builder()
+                .code(401)
+                .success(false)
+                .message(e.getMessage())
+                .data(null)
+                .build();
+    }
 }
