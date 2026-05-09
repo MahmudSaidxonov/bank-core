@@ -1,5 +1,8 @@
 package uz.banking.bank_core.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import uz.banking.bank_core.dto.AuthResponseDto;
+import uz.banking.bank_core.dto.LoginRequestDto;
 import uz.banking.bank_core.dto.UserRegisterDto;
 import uz.banking.bank_core.dto.UserResponseDto;
 import uz.banking.bank_core.entity.Account;
@@ -7,10 +10,13 @@ import uz.banking.bank_core.entity.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import uz.banking.bank_core.exception.BadCredentialsException;
 import uz.banking.bank_core.exception.UserAlreadyExistsException;
+import uz.banking.bank_core.exception.UserNotFoundException;
 import uz.banking.bank_core.mapper.UserMapper;
 import uz.banking.bank_core.repository.AccountRepository;
 import uz.banking.bank_core.repository.UserRepository;
+import uz.banking.bank_core.security.JwtUtil;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -22,6 +28,8 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     @Transactional
     public UserResponseDto registerUser(UserRegisterDto userDto) {
@@ -31,7 +39,7 @@ public class UserService {
         }
 
         User user = userMapper.toEntity(userDto);
-        user.setPasswordHash(userDto.getPassword() + "_hashed");
+        user.setPasswordHash(passwordEncoder.encode(userDto.getPassword()));
 
         User savedUser = userRepository.save(user);
 
@@ -44,5 +52,20 @@ public class UserService {
         accountRepository.save(defaultAccount);
 
         return userMapper.toDto(savedUser);
+    }
+
+    public AuthResponseDto login (LoginRequestDto requestDto) {
+
+        User user = userRepository.findByUsername(requestDto.getUsername())
+                .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
+
+        if (!passwordEncoder.matches(requestDto.getPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException("Invalid username or password");
+        }
+
+        AuthResponseDto responseDto = new AuthResponseDto();
+        responseDto.setToken(jwtUtil.generateToken(requestDto.getUsername()));
+        
+        return responseDto;
     }
 }

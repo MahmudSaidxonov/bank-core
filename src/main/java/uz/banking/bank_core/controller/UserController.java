@@ -1,8 +1,6 @@
 package uz.banking.bank_core.controller;
 
-import uz.banking.bank_core.dto.ApiResponseDto;
-import uz.banking.bank_core.dto.UserRegisterDto;
-import uz.banking.bank_core.dto.UserResponseDto;
+import uz.banking.bank_core.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +23,17 @@ public class UserController {
                 .message("success")
                 .success(true)
                 .data(userResponseDto)
+                .build();
+    }
+
+    @PostMapping("login")
+    public ApiResponseDto<AuthResponseDto> loginUser(@RequestBody LoginRequestDto requestDto) {
+        AuthResponseDto responseDto = userService.login(requestDto);
+        return ApiResponseDto.<AuthResponseDto>builder()
+                .code(200)
+                .message("success")
+                .success(true)
+                .data(responseDto)
                 .build();
     }
 }

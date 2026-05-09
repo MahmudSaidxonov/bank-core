@@ -2,6 +2,10 @@ package uz.banking.bank_core.service;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import uz.banking.bank_core.dto.TransactionResponseDto;
 import uz.banking.bank_core.dto.TransferRequestDto;
@@ -53,5 +57,25 @@ public class TransactionService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         return transactionMapper.toDto(savedTransaction);
+    }
+
+    public Page<TransactionResponseDto> getAccountHistory(Long accountId, int page, int size) {
+
+        if (!accountRepository.existsById(accountId)) {
+            throw new AccountNotFoundException("Account with ID " + accountId + " not found");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Transaction> transactions = transactionRepository.findByFromAccount_IdOrToAccount_Id(accountId, accountId, pageable);
+
+        return transactions.map(transactionMapper::toDto);
+    }
+
+    public Page<TransactionResponseDto> getAllTransactions(int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Transaction> transactions = transactionRepository.findAll(pageable);
+
+        return transactions.map(transactionMapper::toDto);
     }
 }
