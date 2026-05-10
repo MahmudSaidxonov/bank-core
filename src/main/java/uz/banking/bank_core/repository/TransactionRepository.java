@@ -10,4 +10,6 @@ import uz.banking.bank_core.entity.Transaction;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
     Page<Transaction> findByFromAccount_IdOrToAccount_Id(Long fromId, Long toId, Pageable pageable);
+    Page<Transaction> findByFromAccount_User_UsernameOrToAccount_User_Username(String fromUsername, String toUsername, Pageable pageable);
+
 }

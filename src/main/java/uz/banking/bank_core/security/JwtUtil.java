@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import uz.banking.bank_core.enums.Role;
 
 import java.security.Key;
 import java.time.Instant;
@@ -25,9 +26,10 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
     }
 
-    public String generateToken(String username) {
+    public String generateToken(String username, Role role) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role.name())
                 .setIssuedAt(Date.from(Instant.now()))
                 .setExpiration(Date.from(Instant.now().plus(60, ChronoUnit.MINUTES)))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -41,6 +43,15 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public String extractRole(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("role", String.class);
     }
 
     public boolean isTokenValid(String token) {

@@ -89,4 +89,15 @@ public class GlobalExceptionHandler {
                 .data(null)
                 .build();
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponseDto<Void> handleAccessDeniedException(AccessDeniedException e) {
+        return ApiResponseDto.<Void>builder()
+                .code(403)
+                .success(false)
+                .message(e.getMessage())
+                .data(null)
+                .build();
+    }
 }

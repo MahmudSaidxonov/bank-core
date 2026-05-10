@@ -1,5 +1,9 @@
 package uz.banking.bank_core.repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import uz.banking.bank_core.entity.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -12,4 +16,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Optional<Account> findByAccountNumber(String accountNUmber);
     List<Account> findAllByUserId(Long userId);
+    List<Account> findByUser_Username(String username);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Account a WHERE a.id = :id")
+    Optional<Account> findByIdWithLock(@Param("id") Long id);
 }

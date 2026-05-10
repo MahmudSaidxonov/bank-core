@@ -1,21 +1,21 @@
 package uz.banking.bank_core.service;
 
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import uz.banking.bank_core.dto.TransactionResponseDto;
 import uz.banking.bank_core.dto.TransferRequestDto;
 import uz.banking.bank_core.entity.Account;
 import uz.banking.bank_core.entity.Transaction;
+import uz.banking.bank_core.entity.User;
+import uz.banking.bank_core.enums.Role;
 import uz.banking.bank_core.enums.TransactionStatus;
-import uz.banking.bank_core.exception.AccountNotFoundException;
-import uz.banking.bank_core.exception.InsufficientFundsException;
-import uz.banking.bank_core.exception.SelfTransferException;
-import uz.banking.bank_core.exception.UserNotFoundException;
+import uz.banking.bank_core.exception.*;
 import uz.banking.bank_core.mapper.TransactionMapper;
 import uz.banking.bank_core.repository.AccountRepository;
 import uz.banking.bank_core.repository.TransactionRepository;
@@ -27,21 +27,34 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final TransactionAuditService transactionAuditService;
 
     @Transactional
     public TransactionResponseDto transfer(TransferRequestDto requestDto) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
         if (requestDto.getFromAccountId().equals(requestDto.getToAccountId())) {
             throw new SelfTransferException("Cannot transfer funds to the same account");
         }
 
-        Account fromAccount = accountRepository.findById(requestDto.getFromAccountId())
-                .orElseThrow(() -> new AccountNotFoundException("Account with ID " + requestDto.getFromAccountId() + " not found"));
+        Account fromAccount;
+        Account toAccount;
 
-        Account toAccount = accountRepository.findById(requestDto.getToAccountId())
-                .orElseThrow(() -> new AccountNotFoundException("Account with ID " + requestDto.getToAccountId() + " not found"));
+        if (requestDto.getFromAccountId() <= requestDto.getToAccountId()) {
+            fromAccount = getAccountWithLock(requestDto.getFromAccountId());
+            toAccount = getAccountWithLock(requestDto.getToAccountId());
+        } else {
+            toAccount = getAccountWithLock(requestDto.getToAccountId());
+            fromAccount = getAccountWithLock(requestDto.getFromAccountId());
+        }
 
-        if(fromAccount.getBalance().compareTo(requestDto.getAmount()) < 0) {
+        if (!fromAccount.getUser().getUsername().equals(username)) {
+            transactionAuditService.saveFailedTransaction(fromAccount, toAccount, requestDto.getAmount());
+            throw new AccessDeniedException("Access denied! This is not your account!");
+        }
+
+        if (fromAccount.getBalance().compareTo(requestDto.getAmount()) < 0) {
+            transactionAuditService.saveFailedTransaction(fromAccount, toAccount, requestDto.getAmount());
             throw new InsufficientFundsException("Insufficient funds");
         }
 
@@ -57,6 +70,15 @@ public class TransactionService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         return transactionMapper.toDto(savedTransaction);
+    }
+
+    public Page<TransactionResponseDto> getMyAccountHistory(int page, int size) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Transaction> transactions = transactionRepository.findByFromAccount_User_UsernameOrToAccount_User_Username(username, username, pageable);
+
+        return transactions.map(transactionMapper::toDto);
     }
 
     public Page<TransactionResponseDto> getAccountHistory(Long accountId, int page, int size) {
@@ -77,5 +99,10 @@ public class TransactionService {
         Page<Transaction> transactions = transactionRepository.findAll(pageable);
 
         return transactions.map(transactionMapper::toDto);
+    }
+
+    private Account getAccountWithLock(Long accountId) {
+        return accountRepository.findByIdWithLock(accountId)
+                .orElseThrow(() -> new AccountNotFoundException("Account with ID " + accountId + " not found"));
     }
 }
