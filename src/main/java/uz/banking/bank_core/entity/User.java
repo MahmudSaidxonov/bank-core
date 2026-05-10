@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import uz.banking.bank_core.enums.Role;
 
 import java.time.LocalDateTime;
 
@@ -29,4 +30,8 @@ public class User {
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private  Role role;
 }

@@ -10,6 +10,7 @@ import uz.banking.bank_core.entity.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import uz.banking.bank_core.enums.Role;
 import uz.banking.bank_core.exception.BadCredentialsException;
 import uz.banking.bank_core.exception.UserAlreadyExistsException;
 import uz.banking.bank_core.exception.UserNotFoundException;
@@ -39,6 +40,7 @@ public class UserService {
         }
 
         User user = userMapper.toEntity(userDto);
+        user.setRole(Role.ROLE_USER);
         user.setPasswordHash(passwordEncoder.encode(userDto.getPassword()));
 
         User savedUser = userRepository.save(user);
@@ -64,7 +66,7 @@ public class UserService {
         }
 
         AuthResponseDto responseDto = new AuthResponseDto();
-        responseDto.setToken(jwtUtil.generateToken(requestDto.getUsername()));
+        responseDto.setToken(jwtUtil.generateToken(requestDto.getUsername(), user.getRole()));
         
         return responseDto;
     }

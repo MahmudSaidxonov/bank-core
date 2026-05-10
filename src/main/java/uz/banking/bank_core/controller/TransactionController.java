@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.banking.bank_core.dto.ApiResponseDto;
 import uz.banking.bank_core.dto.TransactionResponseDto;
@@ -30,11 +31,27 @@ public class TransactionController {
                 .build();
     }
 
-    @GetMapping("history/{accountId}")
-    public ApiResponseDto<Page<TransactionResponseDto>> getTransactionHistory(
-        @PathVariable Long accountId,
+    @GetMapping("history/my")
+    public ApiResponseDto<Page<TransactionResponseDto>> getMyTransactionHistory(
         @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page must be at least 0") int page,
         @RequestParam(defaultValue = "10") @Max(value = 100, message = "Max page size: 100") int size)
+    {
+        Page<TransactionResponseDto> history = transactionService.getMyAccountHistory(page, size);
+
+        return ApiResponseDto.<Page<TransactionResponseDto>>builder()
+                .code(200)
+                .message("success")
+                .success(true)
+                .data(history)
+                .build();
+    }
+
+    @GetMapping("history/{accountId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponseDto<Page<TransactionResponseDto>> getTransactionHistory(
+            @PathVariable Long accountId,
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page must be at least 0") int page,
+            @RequestParam(defaultValue = "10") @Max(value = 100, message = "Max page size: 100") int size)
     {
         Page<TransactionResponseDto> history = transactionService.getAccountHistory(accountId, page, size);
 
@@ -47,6 +64,7 @@ public class TransactionController {
     }
 
     @GetMapping("all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponseDto<Page<TransactionResponseDto>> getAllTransactions(
             @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page must be at least 0") int page,
             @RequestParam(defaultValue = "10") @Max(value = 100, message = "Max page size: 100") int size)

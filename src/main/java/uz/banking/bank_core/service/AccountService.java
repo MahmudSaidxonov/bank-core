@@ -3,11 +3,13 @@ package uz.banking.bank_core.service;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 import uz.banking.bank_core.dto.AccountResponseDto;
 import uz.banking.bank_core.dto.DepositRequestDto;
 import uz.banking.bank_core.entity.Account;
+import uz.banking.bank_core.exception.AccessDeniedException;
 import uz.banking.bank_core.exception.AccountNotFoundException;
 import uz.banking.bank_core.exception.UserNotFoundException;
 import uz.banking.bank_core.mapper.AccountMapper;
@@ -25,6 +27,16 @@ public class AccountService {
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
 
+    public List<AccountResponseDto> getMyAccounts() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        List<Account> accounts = accountRepository.findByUser_Username(username);
+
+        return accounts.stream()
+                .map(accountMapper::toDto)
+                .toList();
+    }
+
     public List<AccountResponseDto> getUserAccounts(Long userId) {
 
         if (!userRepository.existsById(userId)) {
@@ -40,9 +52,15 @@ public class AccountService {
 
     @Transactional
     public AccountResponseDto deposit(DepositRequestDto requestDto) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        Account account = accountRepository.findById(requestDto.getAccountId())
+
+        Account account = accountRepository.findByIdWithLock(requestDto.getAccountId())
                 .orElseThrow(() -> new AccountNotFoundException("Account with ID " + requestDto.getAccountId() + " not found"));
+
+    if (!account.getUser().getUsername().equals(username)) {
+            throw new AccessDeniedException("Access denied! This is not your account!");
+        }
 
         account.setBalance(account.getBalance().add(requestDto.getAmount()));
         Account savedAccount = accountRepository.save(account);

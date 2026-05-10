@@ -2,6 +2,7 @@ package uz.banking.bank_core.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.banking.bank_core.dto.AccountResponseDto;
 import uz.banking.bank_core.dto.ApiResponseDto;
@@ -17,7 +18,19 @@ public class AccountController {
 
     private final AccountService accountService;
 
+    @GetMapping("user/my")
+    public ApiResponseDto<List<AccountResponseDto>> getMyAccounts () {
+        List<AccountResponseDto> accountResponseDto = accountService.getMyAccounts();
+        return ApiResponseDto.<List<AccountResponseDto>>builder()
+                .code(200)
+                .message("success")
+                .success(true)
+                .data(accountResponseDto)
+            .build();
+    }
+
     @GetMapping("user/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponseDto<List<AccountResponseDto>> getAccounts (@PathVariable Long userId) {
         List<AccountResponseDto> accountResponseDto = accountService.getUserAccounts(userId);
         return ApiResponseDto.<List<AccountResponseDto>>builder()
