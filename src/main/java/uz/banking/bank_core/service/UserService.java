@@ -70,4 +70,11 @@ public class UserService {
         
         return responseDto;
     }
+
+    public UserResponseDto getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+
+        return userMapper.toDto(user);
+    }
 }

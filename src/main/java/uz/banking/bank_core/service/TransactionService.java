@@ -1,6 +1,7 @@
 package uz.banking.bank_core.service;
 
 import lombok.AllArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uz.banking.bank_core.config.RabbitMQConfig;
 import uz.banking.bank_core.dto.TransactionResponseDto;
 import uz.banking.bank_core.dto.TransferRequestDto;
 import uz.banking.bank_core.entity.Account;
@@ -28,6 +30,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionAuditService transactionAuditService;
+    private final RabbitTemplate rabbitTemplate;
 
     @Transactional
     public TransactionResponseDto transfer(TransferRequestDto requestDto) {
@@ -40,7 +43,7 @@ public class TransactionService {
         Account fromAccount;
         Account toAccount;
 
-        if (requestDto.getFromAccountId() <= requestDto.getToAccountId()) {
+        if (requestDto.getFromAccountId() < requestDto.getToAccountId()) {
             fromAccount = getAccountWithLock(requestDto.getFromAccountId());
             toAccount = getAccountWithLock(requestDto.getToAccountId());
         } else {
@@ -69,7 +72,11 @@ public class TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        return transactionMapper.toDto(savedTransaction);
+        TransactionResponseDto responseDto = transactionMapper.toDto(savedTransaction);
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, responseDto);
+
+        return responseDto;
     }
 
     public Page<TransactionResponseDto> getMyAccountHistory(int page, int size) {
