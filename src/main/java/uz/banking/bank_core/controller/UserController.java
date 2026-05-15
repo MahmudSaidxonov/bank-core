@@ -1,11 +1,8 @@
 package uz.banking.bank_core.controller;
 
+import org.springframework.web.bind.annotation.*;
 import uz.banking.bank_core.dto.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import uz.banking.bank_core.service.UserService;
 
 @RestController
