@@ -40,6 +40,8 @@ class TransactionServiceTest {
     private  TransactionMapper  transactionMapper;
     @Mock
     private  TransactionAuditService transactionAuditService;
+    @Mock
+    private org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
 
     @InjectMocks
     private TransactionService transactionService;
