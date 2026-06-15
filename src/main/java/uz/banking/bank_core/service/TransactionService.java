@@ -1,6 +1,9 @@
 package uz.banking.bank_core.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,24 +16,31 @@ import uz.banking.bank_core.config.RabbitMQConfig;
 import uz.banking.bank_core.dto.TransactionResponseDto;
 import uz.banking.bank_core.dto.TransferRequestDto;
 import uz.banking.bank_core.entity.Account;
+import uz.banking.bank_core.entity.OutboxMessage;
 import uz.banking.bank_core.entity.Transaction;
 import uz.banking.bank_core.entity.User;
+import uz.banking.bank_core.enums.OutboxStatus;
 import uz.banking.bank_core.enums.Role;
 import uz.banking.bank_core.enums.TransactionStatus;
 import uz.banking.bank_core.exception.*;
 import uz.banking.bank_core.mapper.TransactionMapper;
 import uz.banking.bank_core.repository.AccountRepository;
+import uz.banking.bank_core.repository.OutboxRepository;
 import uz.banking.bank_core.repository.TransactionRepository;
+import uz.banking.bank_core.repository.UserRepository;
+
+import java.time.LocalDateTime;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionMapper transactionMapper;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionAuditService transactionAuditService;
-    private final RabbitTemplate rabbitTemplate;
+    private final OutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public TransactionResponseDto transfer(TransferRequestDto requestDto) {
@@ -74,7 +84,19 @@ public class TransactionService {
 
         TransactionResponseDto responseDto = transactionMapper.toDto(savedTransaction);
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, responseDto);
+        String jsonPayload;
+        try {
+            jsonPayload = objectMapper.writeValueAsString(responseDto);
+        } catch (JsonProcessingException e) {
+            throw new SerializationException("Unexpected server error. Transfer failed, your funds are safe. Please try again in 5 minutes.");
+        }
+
+        OutboxMessage outboxMessage = new OutboxMessage();
+        outboxMessage.setEventType("EMAIL_NOTIFICATION");
+        outboxMessage.setPayload(jsonPayload);
+        outboxMessage.setStatus(OutboxStatus.NEW);
+
+        outboxRepository.save(outboxMessage);
 
         return responseDto;
     }

@@ -100,4 +100,15 @@ public class GlobalExceptionHandler {
                 .data(null)
                 .build();
     }
+
+    @ExceptionHandler(SerializationException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiResponseDto<Void> handleSerializationException(SerializationException e) {
+        return ApiResponseDto.<Void>builder()
+                .code(500)
+                .success(false)
+                .message(e.getMessage())
+                .data(null)
+                .build();
+    }
 }
