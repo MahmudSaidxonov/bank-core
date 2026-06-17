@@ -48,10 +48,12 @@ You don't need to install databases or message brokers on your local machine. Ev
 * Git, JDK 17, Maven**
 
 ### Installation
-
-1. Clone the repository:
+Since this is a multi-repo microservices architecture, you need to clone all related services into a single workspace directory.
+1. Clone the repositories:
 ```bash
+git clone https://github.com/MahmudSaidxonov/service-registry.git
 git clone https://github.com/MahmudSaidxonov/bank-core.git
+git clone https://github.com/MahmudSaidxonov/bank-notification.git
 cd bank-core
 ```
 
