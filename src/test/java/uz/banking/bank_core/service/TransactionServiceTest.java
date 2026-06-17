@@ -1,5 +1,6 @@
 package uz.banking.bank_core.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Enumerated;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,13 +8,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import uz.banking.bank_core.dto.TransactionResponseDto;
 import uz.banking.bank_core.dto.TransferRequestDto;
 import uz.banking.bank_core.entity.Account;
+import uz.banking.bank_core.entity.OutboxMessage;
 import uz.banking.bank_core.entity.Transaction;
 import uz.banking.bank_core.entity.User;
 import uz.banking.bank_core.enums.TransactionStatus;
@@ -21,6 +25,7 @@ import uz.banking.bank_core.exception.InsufficientFundsException;
 import uz.banking.bank_core.exception.SelfTransferException;
 import uz.banking.bank_core.mapper.TransactionMapper;
 import uz.banking.bank_core.repository.AccountRepository;
+import uz.banking.bank_core.repository.OutboxRepository;
 import uz.banking.bank_core.repository.TransactionRepository;
 
 import java.math.BigDecimal;
@@ -40,8 +45,12 @@ class TransactionServiceTest {
     private  TransactionMapper  transactionMapper;
     @Mock
     private  TransactionAuditService transactionAuditService;
+    @Spy
+    private ObjectMapper objectMapper;
     @Mock
-    private org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
+    private OutboxRepository outboxRepository;
+//    @Mock
+//    private org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -141,6 +150,7 @@ class TransactionServiceTest {
         responseDto.setStatus(TransactionStatus.SUCCESS);
 
         when(transactionMapper.toDto(any(Transaction.class))).thenReturn(responseDto);
+        when(outboxRepository.save(any(OutboxMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         TransactionResponseDto result = transactionService.transfer(requestDto);
 
@@ -154,6 +164,7 @@ class TransactionServiceTest {
         verify(accountRepository, times(1)).findByIdWithLock(fromAccount.getId());
         verify(accountRepository, times(1)).findByIdWithLock(toAccount.getId());
         verify(transactionRepository, times(1)).save(any(Transaction.class));
+        verify(outboxRepository, times(1)).save(any(OutboxMessage.class));
         verify(transactionAuditService, never()).saveFailedTransaction(fromAccount, toAccount, requestDto.getAmount());
     }
 }

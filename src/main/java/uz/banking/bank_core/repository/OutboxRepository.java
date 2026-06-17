@@ -12,6 +12,6 @@ import java.util.List;
 public interface OutboxRepository extends JpaRepository<OutboxMessage, Long> {
     List<OutboxMessage> findByStatus(OutboxStatus status);
 
-    @Query(value = "SELECT * FROM outbox_messages WHERE status = 'NEW' LIMIT 50 FOR UPDATE", nativeQuery = true)
+    @Query(value = "SELECT * FROM outbox_messages WHERE status = 'NEW' LIMIT 50 FOR UPDATE SKIP LOCKED", nativeQuery = true)
     List<OutboxMessage> findAndLockNewMessages();
 }
